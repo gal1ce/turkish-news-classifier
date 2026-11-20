@@ -3,13 +3,12 @@ import json
 import os
 
 import torch
-import torch.nn as nn
-from transformers import AutoTokenizer
-from transformers import AutoModelForSequenceClassification
 from datasets import load_dataset
-from tqdm import tqdm
 from fastapi import FastAPI
 from pydantic import BaseModel
+from torch import nn
+from tqdm import tqdm
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 # Set configs.
 # TTC4900 is a Turkish corpus, so the base model is a Turkish cased BERT.
@@ -35,10 +34,10 @@ def load_data():
     in the model output always maps to labels[i] — no hand-written mapping to
     drift out of sync with the data.
     """
-    df = load_dataset("ttc4900")
+    df = load_dataset("savasy/ttc4900")
     labels = df["train"].features["category"].names
 
-    split = df["train"].shuffle(seed=42).train_test_split(test_size=0.2)
+    split = df["train"].shuffle(seed=42).train_test_split(test_size=0.2, seed=42)
     train_data = split["train"].map(tokenize, batched=True)
     test_data = split["test"].map(tokenize, batched=True)
 
@@ -46,8 +45,9 @@ def load_data():
     train_data.set_format("torch", columns=columns)
     test_data.set_format("torch", columns=columns)
 
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size=16, shuffle=True)  # type:ignore
-    test_loader = torch.utils.data.DataLoader(test_data, batch_size=16)  # type:ignore
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=8,
+                                               shuffle=True)  # type:ignore
+    test_loader = torch.utils.data.DataLoader(test_data, batch_size=8)  # type:ignore
     return train_loader, test_loader, labels
 
 
